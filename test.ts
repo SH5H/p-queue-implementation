@@ -81,3 +81,45 @@ test("when concurrency is 2", async () => {
 
   expect(testList).toStrictEqual([3, 2, 1, 4]);
 });
+
+// test from p-queue
+const fixture = Symbol("fixture");
+
+test(".add()", async () => {
+  const add = createPQueue({ concurrency: 1 });
+  const promise = add(async () => fixture);
+
+  expect(await promise).toEqual(fixture);
+});
+
+test(".add() - limited concurrency", async () => {
+  const add = createPQueue({ concurrency: 2 });
+  const promise = add(async () => fixture);
+  const promise2 = add(async () => {
+    await delay(100);
+    return fixture;
+  });
+
+  const promise3 = add(async () => fixture);
+  expect(await promise).toEqual(fixture);
+  expect(await promise2).toEqual(fixture);
+  expect(await promise3).toEqual(fixture);
+});
+
+test(".add() - concurrency: 1", async () => {
+  const input = [
+    [10, 300],
+    [20, 200],
+    [30, 100],
+  ];
+
+  const add = createPQueue({ concurrency: 1 });
+
+  const mapper = async ([value, ms]: readonly number[]) =>
+    add(async () => {
+      await delay(ms!);
+      return value!;
+    });
+
+  expect(await Promise.all(input.map(mapper))).toStrictEqual([10, 20, 30]);
+});
